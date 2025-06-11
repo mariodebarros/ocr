@@ -1,9 +1,14 @@
 import argparse
+#<<<<<<< 624zzy-codex/ajustar-código-para-ler-imagem-ou-pdf-e-extrair-campos
+import json
+import re
+import torch
 import os
 import json
 import re
 import torch
 import pandas as pd
+#>>>>>>> master
 
 import tkinter as tk
 from tkinter import filedialog
@@ -19,8 +24,7 @@ from transformers import DonutProcessor, VisionEncoderDecoderModel
 def read_file_path_via_dialog():
     # Step 1: Create a hidden root window (we don’t need to show a full GUI)
     root = tk.Tk()
-    root.attributes('-topmost', True)       # força a janela principal para frente
-    #root.withdraw() 
+    root.withdraw()  # ocultar janela principal
     root.after(0, lambda: root.attributes('-topmost', False))
 
     # Step 2: Open a file‐selection dialog and let the user pick a file
@@ -34,29 +38,7 @@ def read_file_path_via_dialog():
         print("Nenhum arquivo selecionado.")
         return
     
-    #extrai a extensão do arquivo
-    #ext = os.path.splitext(file_path)[1]
-    """c=-1
-    for p in ext:
-        c+=1
-        print(f"file_path[{c}]: {p}")"""
-
-    # Step 3: Abra e leia o conteúdo do arquivo
-    """try:
-        if ext == ".pdf":
-            with open(file_path, "rb") as f:
-                reader = PdfReader(f)
-                content = ""
-                for page in reader.pages:
-                    content += page.extract_text() + "\n"
-
-        else:            
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        print(f"Conteúdo de '{file_path}':\n")
-        print(content)
-    except Exception as e:
-        print(f"Erro ao ler o arquivo: {e}")"""
+    # Comentado: leitura de arquivo para debug
 
     return file_path
 
@@ -118,12 +100,14 @@ def _items_from_json(page_json: dict) -> List[dict]:
 # ---- model & processor ----------------------------------------------------
 
 
-CHECKPOINT = "scharnot/donut-invoices"     # fine-tuned for invoices :contentReference[oaicite:0]{index=0}
-TASK_PROMPT = "<s_invoices>"               # see model card for other checkpoints
-PROC_CKPT   = "naver-clova-ix/donut-base"
+#<<<<<<< 624zzy-codex/ajustar-código-para-ler-imagem-ou-pdf-e-extrair-campos
+CHECKPOINT = "naver-clova-ix/donut-base-finetuned-cord-v2"  # public invoice model
+TASK_PROMPT = "<s_cord-v2>"
+PROC_CKPT = CHECKPOINT
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 processor = DonutProcessor.from_pretrained(CHECKPOINT, use_fast=False)
+#>>>>>>> master
 model = VisionEncoderDecoderModel.from_pretrained(CHECKPOINT).to(device)
 model.eval()
 """if TASK_PROMPT not in processor.tokenizer.get_vocab():
@@ -132,10 +116,20 @@ model.eval()
 
 
 
-if __name__ == "__main__":
-    file_path = read_file_path_via_dialog()
+def main():
+    parser = argparse.ArgumentParser(description="Extrai campos de notas ou cupons fiscais")
+    parser.add_argument("file", nargs="?", help="Caminho para imagem ou PDF")
+    args = parser.parse_args()
 
-    if file_path:
-        print(f"Arquivo selecionado: {file_path}")
-        data = parse_nfe(file_path)
-        print(json.dumps(data, indent=2, ensure_ascii=False))
+#<<<<<<< 624zzy-codex/ajustar-código-para-ler-imagem-ou-pdf-e-extrair-campos
+    file_path = args.file if args.file else read_file_path_via_dialog()
+    if not file_path:
+        return
+
+    print(f"Arquivo selecionado: {file_path}")
+    data = parse_nfe(file_path)
+    print(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
