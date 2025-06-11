@@ -1,8 +1,10 @@
-import argparse, torch, os, json, re, torch
-#import gradio as gr
+import argparse
+import os
+import json
+import re
+import torch
 import pandas as pd
 
-from donut import DonutModel
 import tkinter as tk
 from tkinter import filedialog
 from PIL import Image
@@ -11,7 +13,7 @@ from pdf2image import convert_from_path
 from pathlib import Path
 from typing import List
 
-from transformers import DonutProcessor, VisionEncoderDecoderModel, AutoModel
+from transformers import DonutProcessor, VisionEncoderDecoderModel
 
 # ABRE O ARQUIVO A SER LIDO
 def read_file_path_via_dialog():
@@ -58,25 +60,18 @@ def read_file_path_via_dialog():
 
     return file_path
 
-def parse_nfe(file_path: str) -> pd.DataFrame:
-    """
-    Read a PDF or image NF-e and return a DataFrame with one row per item.
-    Extra fields coming from the model are preserved as columns.
-    """
-    path   = Path(file_path).expanduser()
-    pages  = _load_pages(path)
+def parse_nfe(file_path: str) -> dict:
+    """Return the parsed JSON representation of an NF-e or cupom fiscal."""
+    path = Path(file_path).expanduser()
+    pages = _load_pages(path)
 
-    rows = []
-    for page_no, img in enumerate(pages, 1):
-        page_json = _parse_page(img)
-        for item in _items_from_json(page_json):
-            item["page"] = page_no
-            rows.append(item)
+    results = []
+    for img in pages:
+        results.append(_parse_page(img))
 
-    if not rows:
-        raise ValueError("Nenhum item foi detectado — verifique o checkpoint "
-                         "ou o layout do documento.")
-    return pd.DataFrame(rows)
+    if len(results) == 1:
+        return results[0]
+    return {"pages": results}
 
 def _load_pages(path: Path) -> List[Image.Image]:
     """Return a list of images (pdf pages or single image)."""
@@ -127,12 +122,10 @@ CHECKPOINT = "scharnot/donut-invoices"     # fine-tuned for invoices :contentRef
 TASK_PROMPT = "<s_invoices>"               # see model card for other checkpoints
 PROC_CKPT   = "naver-clova-ix/donut-base"
 
-#device      = "cuda" if torch.cuda.is_available() else "cpu"
-#model       = VisionEncoderDecoderModel.from_pretrained(CHECKPOINT).to(device)
-#model.eval()
-
-processor   = DonutProcessor.from_pretrained(CHECKPOINT, use_fast=False)
-model = DonutModel.from_pretrained(CHECKPOINT),eval()
+device = "cuda" if torch.cuda.is_available() else "cpu"
+processor = DonutProcessor.from_pretrained(CHECKPOINT, use_fast=False)
+model = VisionEncoderDecoderModel.from_pretrained(CHECKPOINT).to(device)
+model.eval()
 """if TASK_PROMPT not in processor.tokenizer.get_vocab():
     processor.tokenizer.add_tokens([TASK_PROMPT])
     model.resize_token_embeddings(len(processor.tokenizer))"""
@@ -144,6 +137,5 @@ if __name__ == "__main__":
 
     if file_path:
         print(f"Arquivo selecionado: {file_path}")
-
-    df = parse_nfe(file_path)
-    print(df.head())           # visual check
+        data = parse_nfe(file_path)
+        print(json.dumps(data, indent=2, ensure_ascii=False))
