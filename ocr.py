@@ -118,12 +118,12 @@ def _items_from_json(page_json: dict) -> List[dict]:
 # ---- model & processor ----------------------------------------------------
 
 
-CHECKPOINT = "scharnot/donut-invoices"     # fine-tuned for invoices :contentReference[oaicite:0]{index=0}
+CHECKPOINT = "scharnot/donut-invoices"     # fine-tuned for invoices
 TASK_PROMPT = "<s_invoices>"               # see model card for other checkpoints
-PROC_CKPT   = "naver-clova-ix/donut-base"
+PROC_CKPT = "naver-clova-ix/donut-base"    # processor weights
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-processor = DonutProcessor.from_pretrained(CHECKPOINT, use_fast=False)
+processor = DonutProcessor.from_pretrained(PROC_CKPT, use_fast=False)
 model = VisionEncoderDecoderModel.from_pretrained(CHECKPOINT).to(device)
 model.eval()
 """if TASK_PROMPT not in processor.tokenizer.get_vocab():
