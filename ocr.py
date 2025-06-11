@@ -1,7 +1,14 @@
 import argparse
+#<<<<<<< 624zzy-codex/ajustar-código-para-ler-imagem-ou-pdf-e-extrair-campos
 import json
 import re
 import torch
+import os
+import json
+import re
+import torch
+import pandas as pd
+#>>>>>>> master
 
 import tkinter as tk
 from tkinter import filedialog
@@ -93,12 +100,14 @@ def _items_from_json(page_json: dict) -> List[dict]:
 # ---- model & processor ----------------------------------------------------
 
 
+#<<<<<<< 624zzy-codex/ajustar-código-para-ler-imagem-ou-pdf-e-extrair-campos
 CHECKPOINT = "naver-clova-ix/donut-base-finetuned-cord-v2"  # public invoice model
 TASK_PROMPT = "<s_cord-v2>"
 PROC_CKPT = CHECKPOINT
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-processor = DonutProcessor.from_pretrained(PROC_CKPT, use_fast=False)
+processor = DonutProcessor.from_pretrained(CHECKPOINT, use_fast=False)
+#>>>>>>> master
 model = VisionEncoderDecoderModel.from_pretrained(CHECKPOINT).to(device)
 model.eval()
 """if TASK_PROMPT not in processor.tokenizer.get_vocab():
@@ -112,6 +121,7 @@ def main():
     parser.add_argument("file", nargs="?", help="Caminho para imagem ou PDF")
     args = parser.parse_args()
 
+#<<<<<<< 624zzy-codex/ajustar-código-para-ler-imagem-ou-pdf-e-extrair-campos
     file_path = args.file if args.file else read_file_path_via_dialog()
     if not file_path:
         return
