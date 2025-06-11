@@ -1,8 +1,8 @@
-import argparse, torch, os, json, re, torch
-#import gradio as gr
-import pandas as pd
+import argparse
+import json
+import re
+import torch
 
-from donut import DonutModel
 import tkinter as tk
 from tkinter import filedialog
 from PIL import Image
@@ -11,14 +11,13 @@ from pdf2image import convert_from_path
 from pathlib import Path
 from typing import List
 
-from transformers import DonutProcessor, VisionEncoderDecoderModel, AutoModel
+from transformers import DonutProcessor, VisionEncoderDecoderModel
 
 # ABRE O ARQUIVO A SER LIDO
 def read_file_path_via_dialog():
     # Step 1: Create a hidden root window (we don’t need to show a full GUI)
     root = tk.Tk()
-    root.attributes('-topmost', True)       # força a janela principal para frente
-    #root.withdraw() 
+    root.withdraw()  # ocultar janela principal
     root.after(0, lambda: root.attributes('-topmost', False))
 
     # Step 2: Open a file‐selection dialog and let the user pick a file
@@ -32,51 +31,22 @@ def read_file_path_via_dialog():
         print("Nenhum arquivo selecionado.")
         return
     
-    #extrai a extensão do arquivo
-    #ext = os.path.splitext(file_path)[1]
-    """c=-1
-    for p in ext:
-        c+=1
-        print(f"file_path[{c}]: {p}")"""
-
-    # Step 3: Abra e leia o conteúdo do arquivo
-    """try:
-        if ext == ".pdf":
-            with open(file_path, "rb") as f:
-                reader = PdfReader(f)
-                content = ""
-                for page in reader.pages:
-                    content += page.extract_text() + "\n"
-
-        else:            
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        print(f"Conteúdo de '{file_path}':\n")
-        print(content)
-    except Exception as e:
-        print(f"Erro ao ler o arquivo: {e}")"""
+    # Comentado: leitura de arquivo para debug
 
     return file_path
 
-def parse_nfe(file_path: str) -> pd.DataFrame:
-    """
-    Read a PDF or image NF-e and return a DataFrame with one row per item.
-    Extra fields coming from the model are preserved as columns.
-    """
-    path   = Path(file_path).expanduser()
-    pages  = _load_pages(path)
+def parse_nfe(file_path: str) -> dict:
+    """Return the parsed JSON representation of an NF-e or cupom fiscal."""
+    path = Path(file_path).expanduser()
+    pages = _load_pages(path)
 
-    rows = []
-    for page_no, img in enumerate(pages, 1):
-        page_json = _parse_page(img)
-        for item in _items_from_json(page_json):
-            item["page"] = page_no
-            rows.append(item)
+    results = []
+    for img in pages:
+        results.append(_parse_page(img))
 
-    if not rows:
-        raise ValueError("Nenhum item foi detectado — verifique o checkpoint "
-                         "ou o layout do documento.")
-    return pd.DataFrame(rows)
+    if len(results) == 1:
+        return results[0]
+    return {"pages": results}
 
 def _load_pages(path: Path) -> List[Image.Image]:
     """Return a list of images (pdf pages or single image)."""
@@ -123,27 +93,33 @@ def _items_from_json(page_json: dict) -> List[dict]:
 # ---- model & processor ----------------------------------------------------
 
 
-CHECKPOINT = "scharnot/donut-invoices"     # fine-tuned for invoices :contentReference[oaicite:0]{index=0}
-TASK_PROMPT = "<s_invoices>"               # see model card for other checkpoints
-PROC_CKPT   = "naver-clova-ix/donut-base"
+CHECKPOINT = "naver-clova-ix/donut-base-finetuned-cord-v2"  # public invoice model
+TASK_PROMPT = "<s_cord-v2>"
+PROC_CKPT = CHECKPOINT
 
-#device      = "cuda" if torch.cuda.is_available() else "cpu"
-#model       = VisionEncoderDecoderModel.from_pretrained(CHECKPOINT).to(device)
-#model.eval()
-
-processor   = DonutProcessor.from_pretrained(CHECKPOINT, use_fast=False)
-model = DonutModel.from_pretrained(CHECKPOINT),eval()
+device = "cuda" if torch.cuda.is_available() else "cpu"
+processor = DonutProcessor.from_pretrained(PROC_CKPT, use_fast=False)
+model = VisionEncoderDecoderModel.from_pretrained(CHECKPOINT).to(device)
+model.eval()
 """if TASK_PROMPT not in processor.tokenizer.get_vocab():
     processor.tokenizer.add_tokens([TASK_PROMPT])
     model.resize_token_embeddings(len(processor.tokenizer))"""
 
 
 
+def main():
+    parser = argparse.ArgumentParser(description="Extrai campos de notas ou cupons fiscais")
+    parser.add_argument("file", nargs="?", help="Caminho para imagem ou PDF")
+    args = parser.parse_args()
+
+    file_path = args.file if args.file else read_file_path_via_dialog()
+    if not file_path:
+        return
+
+    print(f"Arquivo selecionado: {file_path}")
+    data = parse_nfe(file_path)
+    print(json.dumps(data, indent=2, ensure_ascii=False))
+
+
 if __name__ == "__main__":
-    file_path = read_file_path_via_dialog()
-
-    if file_path:
-        print(f"Arquivo selecionado: {file_path}")
-
-    df = parse_nfe(file_path)
-    print(df.head())           # visual check
+    main()
