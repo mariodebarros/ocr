@@ -2,6 +2,11 @@ import argparse
 import json
 import re
 import torch
+import os
+import json
+import re
+import torch
+import pandas as pd
 
 import tkinter as tk
 from tkinter import filedialog
@@ -103,7 +108,7 @@ TASK_PROMPT = "<s_cord-v2>"
 PROC_CKPT = CHECKPOINT
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-processor = DonutProcessor.from_pretrained(PROC_CKPT, use_fast=False)
+processor = DonutProcessor.from_pretrained(CHECKPOINT, use_fast=False)
 model = VisionEncoderDecoderModel.from_pretrained(CHECKPOINT).to(device)
 model.eval()
 """if TASK_PROMPT not in processor.tokenizer.get_vocab():
@@ -128,3 +133,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
